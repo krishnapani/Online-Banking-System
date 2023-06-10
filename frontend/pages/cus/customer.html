@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Transfer History</title>
+  <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"
+    integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj"
+    crossorigin="anonymous"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.css"
+    crossorigin="anonymous">
+  <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+  <link rel="stylesheet" href="c.css">
+</head>
+
+<body>
+  <header class="header">
+    <h1><span class='fas fa-university' style='color:#b8d2a0'></span>   Bank Of X</h1>
+    <nav class="navbar">
+      <a href="../../index.html"><span class='fas fa-home' style='color:#b8d2a0'></span> Home</a>
+      <a href="customer.html"><span class='fas fa-id-badge' style='color:#b8d2a0'></span> Customers</a>
+      <a href="../transactions.html"><span class='fas fa-history' style='color:#b8d2a0'></span> History</a>
+      <a href="https://www.xe.com/currencyconverter/convert/?Amount=20&From=INR&To=EUR">Currency Convertor</a>
+    </nav>
+  </header>
+  <div class="container">
+    <h1 class="text-center pt-4" style="color: rgb(100, 0, 0);">Our Customers</h1>
+    <div class="d-flex justify-content-center align-items-center " id="loading-message" style="height: 100vh;">
+      <div class="spinner-border spinner-border-lg" role="status" style="width: 5rem; height: 5rem;">
+        <span class="sr-only">Loading...Try refreshing</span>
+      </div>
+      <h3>Loading...Try refreshing</h3>
+    </div>
+    <br>
+    <div class="row">
+      <div class="col">
+        <div class="table-responsive-sm">
+          <table class="table table-hover table-sm table-striped table-condensed table-bordered"
+            style="border-color: white;">
+            <thead style="color: rgb(0, 0, 0);">
+              <tr>
+                <th scope="col" class="text-center py-2">Account no.</th>
+                <th scope="col" class="text-center py-2">Account holder name</th>
+                <th scope="col" class="text-center py-2">E-Mail</th>
+                <th scope="col" class="text-center py-2">Account Balance (in Rs.)</th>
+                <th scope="col" class="text-center py-2">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="customers-table">
+              <!-- This is where the customer data will be populated -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script>
+    // Fetch and populate customer data
+    async function fetchCustomers() {
+      try {
+        const response = await axios.get('https://backend-jlan.onrender.com/customers');
+        const customers = response.data;
+        const customersTable = document.getElementById('customers-table');
+        const loadingMessage = document.querySelector('.d-flex.justify-content-center'); // Get the loading message element
+        const parentContainer = loadingMessage.parentNode; // Get the parent container of the loading message
+        customers.forEach(customer => {
+          const row = document.createElement('tr');
+          row.style.color = 'black';
+          const accountNo = document.createElement('td');
+          accountNo.className = 'py-2';
+          accountNo.textContent = customer.id;
+          const accountHolder = document.createElement('td');
+          accountHolder.className = 'py-2';
+          accountHolder.textContent = customer.name;
+          const email = document.createElement('td');
+          email.className = 'py-2';
+          email.textContent = customer.email;
+          const balance = document.createElement('td');
+          balance.className = 'py-2';
+          balance.textContent = customer.balance;
+          const transferBtnCell = document.createElement('td');
+          const transferBtn = document.createElement('button');
+          transferBtn.className = 'btn';
+          transferBtn.textContent = 'Transfer money';
+          // Add click event listener to the transfer button
+          transferBtn.addEventListener('click', () => {
+            const sourceId = customer.id;
+            const amount = parseInt(window.prompt('Enter the transfer amount:'));
+            const destinationId = parseInt(window.prompt('Enter the destination customer ID:'));
+            if (sourceId == destinationId) {
+              alert('Source and Destination Same');
+            };
+            if (customer.balance < amount) {
+              alert('Insufficient balance in Source account');
+            };
+            // Send transfer request to the server
+            transferMoney(sourceId, destinationId, amount);
+          });
+          transferBtnCell.appendChild(transferBtn);
+          row.appendChild(accountNo);
+          row.appendChild(accountHolder);
+          row.appendChild(email);
+          row.appendChild(balance);
+          row.appendChild(transferBtnCell);
+          customersTable.appendChild(row);
+        });
+        parentContainer.removeChild(loadingMessage); // Remove the loading message from the DOM
+      } catch (error) {
+        console.error(error);
+      }
+    }
+    
+    function showLoading() {
+      const loadingElement = document.createElement('div');
+      loadingElement.classList.add('loading');
+      document.body.appendChild(loadingElement);
+    }
+
+    // Remove the buffering circle once the transfer is complete
+    function hideLoading() {
+      const loadingElement = document.querySelector('.loading');
+      if (loadingElement) {
+        document.body.removeChild(loadingElement);
+      }
+    }
+    // Function to handle the transfer process
+    async function transferMoney(sourceId, destinationId, amount) {
+      try {
+        showLoading(); // Show buffering circle
+        // Send transfer request to the server
+        const response = await axios.post('https://backend-jlan.onrender.com/transfer', {
+          sourceId,
+          destinationId,
+          amount
+        });
+        hideLoading(); // Hide buffering circle
+        alert('Transfer successful!');
+        location.reload(); // Refresh the page to reflect the updated data
+        // Update the customer data on the webpage
+        fetchCustomers();
+      } catch (error) {
+        console.error(error);
+      }
+    }
+    // Call the function to populate customer data
+    fetchCustomers();
+  </script>
+</body>
+
+</html>
